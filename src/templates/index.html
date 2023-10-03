@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<body>
+<header>
+    <nav class="navar">
+        <div class="container-fluid">
+            <center>
+                <h1>組み立て異常検知アプリケーション</h1>
+            </center>
+        </div>
+    </nav>
+</header>
+<main class="container">
+    <hr>
+
+    <section class="container-fluid">
+        <table border="1">
+            <tr>
+                <th>
+                    <div display:inline-block>
+                        学習画像アップロード(.jpg, .png....)
+                        <form action="/image_upload/train" method="post" enctype="multipart/form-data">
+                            <input name="files" type="file" multiple>
+                            <input type="submit">
+                        </form>
+                        <p style="color:red;">アップロードされた学習画像数：{{train_image_upload_num}}</p>
+                    </div>
+                </th>
+                <th>
+                    <div>
+                        学習アノテーションファイルアップロード(.json)
+                        <form action="/annotation_upload/train" method="post" enctype="multipart/form-data">
+                            <input name="file" type="file" multiple>
+                            <input type="submit">
+                        </form>
+                        {% if train_annotation_upload %}
+                        <p style="color:red;">学習画像のアノテーション：登録済み</p>
+                        {% else %}
+                        学習画像のアノテーション：未登録
+                        {% endif %}
+                    </div>
+                </th>
+            </tr>
+
+            <tr>
+                <th>
+                    <div>
+                        検証画像アップロード(.jpg, .png....)
+                        <form action="/image_upload/valid" method="post" enctype="multipart/form-data">
+                            <input name="files" type="file" multiple>
+                            <input type="submit">
+                            
+                        </form>
+                        <p style="color:red;">アップロードされた検証画像数：{{valid_image_upload_num}}</p>
+                    </div>
+                </th>
+                <th>
+                    <div>
+                        検証アノテーションファイルアップロード(.json)
+                        <form action="/annotation_upload/valid" method="post" enctype="multipart/form-data">
+                            <input name="file" type="file" multiple>
+                            <input type="submit">
+                        </form>
+                        {% if valid_annotation_upload %}
+                        <p style="color:red;">検証画像のアノテーション：登録済み</p>
+                        {% else %}
+                        <p style="color:red;">検証画像のアノテーション：未登録</p>
+                        {% endif %}
+            
+                    </div>
+                </th>
+            </tr>
+            <tr>
+                <th>
+                    <div>
+                        テスト画像アップロード(.jpg, .png....)
+                        <form action="/image_upload/test" method="post" enctype="multipart/form-data">
+                            <input name="files" type="file" multiple>
+                            <input type="submit">
+                        </form>
+                        <p style="color:red;">アップロードされたテスト画像数：{{test_image_upload_num}}</p>
+                    </div>
+                </th>
+            </tr>
+        </table>
+        
+
+        <br></br>
+        
+        <div>
+            異常検知使用有無選択
+        </br>
+            {% if annotation_keys %}
+                {% for key in annotation_keys %}
+                    <form action="/update_configs/{{key}}" method="post" enctype="multipart/form-data">
+                        <label>{{ key }}</label>
+                        
+                        
+                        <select name="part_value">
+                            {% if parchcore_options[loop.index-1] %}
+                                <option value="True" selected>使用</option>
+                                <option value="False">未使用</option>        
+                            {% else %}
+                                <option value="True" >使用</option>
+                                <option value="False" selected>未使用</option>
+                            {% endif %}
+
+                        </select>
+                        <input type="submit">
+                    </form>
+                {% endfor %}
+        
+            {% else %}
+            no anot key
+            {% endif %}
+        
+            
+        </div>
+
+        <br></br>
+        <div>
+            <form method="post" action="/train">
+                <div class="col-auto">
+                    <div class="input-group mb-3">
+                        モデル名：<input type="text" name="model_name" value="model_0"></input>
+                        <button type="submit">学習</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div>
+            <form method="post" action="/inference/valid">
+                <div class="col-auto">
+                    <div class="input-group mb-3">
+                        
+                        <label>モデル選択</label>
+                        <select name="selected_model_name">
+                            {% for model_name in model_list %}
+                                <option value="{{model_name}}">{{model_name}}</option>
+                            {% endfor %}
+
+                        </select>
+                        <button type="submit">検証</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div>
+            <form method="post" action="/inference/test">
+                <div class="col-auto">
+                    <div class="input-group mb-3">
+                        
+                        <label>モデル選択</label>
+                        <select name="selected_model_name">
+                            {% for model_name in model_list %}
+                                <option value="{{model_name}}">{{model_name}}</option>
+                            {% endfor %}
+                        </select>
+                        テスト名 : <input type="text" name="test_name" value="test_0"></input>
+                        <button type="submit">テスト</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div>
+            <form method="post" action="/inference/test">
+                <div class="col-auto">
+                    <div class="input-group mb-3">
+                        <label>モデル選択</label>
+                        <select name="selected_model_name">
+                            {% for model_name in model_list %}
+                                <option value="{{model_name}}">{{model_name}}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit">結果</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+</main>
+</body>
+</html>

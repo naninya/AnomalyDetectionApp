@@ -1,0 +1,36 @@
+version: "3"
+
+services:
+  test_app:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    image: test_app
+    container_name: test_app
+    ports:
+      - "8999:8999"
+      - "9000:9000"
+    volumes:
+      - ./data:/app/data
+      - ./src:/app/src
+      - ./results:/app/results
+      - ./notebook:/app/notebook
+    # command: jupyter notebook --port=9000 --ip=0.0.0.0 --NotebookApp.token='' --allow-root
+    command: uvicorn main:app --host 0.0.0.0 --port 8999 --reload
+    # command: sh -c "uvicorn src.main:app --host 0.0.0.0 --port 8999 --reload && jupyter notebook --port=9000 --ip=0.0.0.0 --NotebookApp.token="" --allow-root"
+    # environment:
+    #   DEBUG: 1
+    # restart: on-failure
+    # tty: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [utility, compute, video]
+  # via:
+  #   build:
+  #     context: ./docker_files
+  #     dockerfile: Dockerfile_via
+  #   ports:
+  #     - "8029:80"
