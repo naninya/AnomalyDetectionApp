@@ -164,5 +164,6 @@ lightning_logs/
 results/
 models/
 data/
+src/detectron2/
 .DS_Store
 *_fortest.ipynb

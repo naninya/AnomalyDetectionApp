@@ -6,7 +6,7 @@ import numpy as np
 from detectron2.config import get_cfg
 from detectron2 import model_zoo
 class Configs:
-    DATA_ROOT = "../data"
+    DATA_ROOT = "../data/bottle"
 
     TRAIN_PREFIX = "train"
     VALID_PREFIX = "valid"
@@ -19,7 +19,7 @@ class Configs:
     OUTPUT_PATH = "../results/test_output"
     DEVICE = "cuda"
 
-    IMAGE_DATA__FORMAT = "JPG"
+    IMAGE_DATA__FORMAT = "png"
 
     # anomaly detection
     PATCHCORE_IMAGE_SIZE = 64
@@ -27,15 +27,31 @@ class Configs:
 
     # hyper params for user
     # define object class map
-    CLASS_NAMES = ["p1", "p2", "p3", "p4"]
+    CLASS_NAMES = ["p1", "p2", "p3"]
     OBJECT_CLASS_MAP = {_class:i for i, _class in enumerate(CLASS_NAMES)}
     PATCHCORE_OPTIONS = {
-        "p1":False,
-        "p2":False,
-        "p3":True,
-        "p4":True
+        # "p1":True,
+        # "p2":True,
+        # "p3":True
     }
-    VALID_ANOMALY_LABELS = None
+    VALID_ANOMALY_LABELS = {
+        "p1":[
+            "0001_青シール無し",
+            "0001_青ピン無し",
+            "0010_青シール無し",
+            "0010_青ピン無し",
+        ],
+        "p2":[
+            "0001_オレンジピン挿入上1NG",
+            "0001_オレンジピン無し",
+            "0010_オレンジピン挿入上3NG",
+            "0010_オレンジピン無し",
+        ],
+        "p3":[
+            "0001_プロテクター位置下1NG",
+            "0010_プロテクター位置下3NG",
+        ]
+    }
     ANOMALY_DETECTION_THRESHOLD_RULE = "no-miss"
     
     DETECTRON_CONFIGS = get_cfg()
@@ -74,7 +90,7 @@ class Configs:
                 self.PATCHCORE_VALID_IMAGE_PATHS[object_name] = os.path.join(self.DATA_ROOT, f"part_{object_name}_anomaly_{self.VALID_PREFIX}")
                 self.PATCHCORE_TEST_IMAGE_PATHS[object_name] = os.path.join(self.DATA_ROOT, f"part_{object_name}_anomaly_{self.TEST_PREFIX}")
                 self.PATCHCORE_MODEL_PATHS[object_name] = f"{self.MODEL_PATH}/patchcore_part_{object_name}"
-        
+        self.DETECTRON_CONFIGS.OUTPUT_DIR = self.MODEL_PATH
         # update thres hold
         with open(os.path.join(self.MODEL_PATH, "class_area.pkl"), "rb") as f:
             self.CLASS_AREA = pickle.load(f)

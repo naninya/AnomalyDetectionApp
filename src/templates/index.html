@@ -130,7 +130,7 @@
         </div>
 
         <div>
-            <form method="post" action="/inference/valid">
+            <form method="post" action="/valid">
                 <div class="col-auto">
                     <div class="input-group mb-3">
                         
@@ -148,7 +148,7 @@
         </div>
 
         <div>
-            <form method="post" action="/inference/test">
+            <form method="post" action="/test">
                 <div class="col-auto">
                     <div class="input-group mb-3">
                         
@@ -166,13 +166,13 @@
         </div>
 
         <div>
-            <form method="post" action="/inference/test">
+            <form method="post" action="/show_result">
                 <div class="col-auto">
                     <div class="input-group mb-3">
-                        <label>モデル選択</label>
-                        <select name="selected_model_name">
-                            {% for model_name in model_list %}
-                                <option value="{{model_name}}">{{model_name}}</option>
+                        <label>結果選択</label>
+                        <select name="selected_result_name">
+                            {% for test in test_list %}
+                                <option value="{{test}}">{{test}}</option>
                             {% endfor %}
                         </select>
                         <button type="submit">結果</button>

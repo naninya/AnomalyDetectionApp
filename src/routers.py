@@ -6,15 +6,18 @@ from typing import List, Optional, Dict
 from model import RequestManager
 import shutil
 import os
+import re
 import pickle
 from trainers import Trainer
 from testers import Tester
 from data.utils import get_keys
 from configs import Configs
 from debuggers import DefaultDebugger
+from glob import glob
 router = APIRouter()
 
 templates = Jinja2Templates(directory="templates/")
+configs = Configs()
 upload_dict = {
     "train_image_upload_num":0,
     "valid_image_upload_num":0,
@@ -22,36 +25,50 @@ upload_dict = {
     "train_annotation_upload":False,
     "valid_annotation_upload":False,
     "annotation_keys":[],
-    "parchcore_options":[False,False,True,True],
+    "parchcore_options":[],
     "model_list":[],
     "test_list":[],
 }
 
 def update_upload_state():
     for prefix in ["train", "valid", "test"]:
-        path = f"../data/{prefix}/images"
+        path = f"{configs.DATA_ROOT}/{prefix}/images"
         if os.path.isdir(path):
             image_num = len(os.listdir(path))
         else:
             image_num = 0
         upload_dict[f"{prefix}_image_upload_num"] = image_num
             
-        path = f"../data/{prefix}/annotations.json"
+        path = f"{configs.DATA_ROOT}/{prefix}/annotations.json"
         if os.path.isfile(path):
             upload_dict[f"{prefix}_annotation_upload"] = True
+            if prefix == "train":
+                upload_dict[f"annotation_keys"] = get_keys(path)
         else:
             upload_dict[f"{prefix}_annotation_upload"] = False
-        if prefix == "train":
-            upload_dict[f"annotation_keys"] = get_keys(path)
+
     upload_dict[f"model_list"] = []
+    upload_dict[f"test_list"] = []
     try:
-        for path in os.listdir("../results/models"):
+        for path in glob("../results/models/*"):
             upload_dict[f"model_list"].append(os.path.basename(path))
-        for path in os.listdir("../results/outputs"):
+        for path in glob("../results/test_output/*"):
             upload_dict[f"test_list"].append(os.path.basename(path).split(".")[-2])
     except:
         upload_dict[f"model_list"] = []
         upload_dict[f"test_list"] = []
+    if len(upload_dict["parchcore_options"]) == 0:
+        upload_dict["parchcore_options"] = [False for i in range(len(upload_dict))]
+    elif len(glob(f"{configs.DATA_ROOT}/part_p*")) > 0:
+        upload_dict["parchcore_options"] = []
+        reg = re.compile(r"part_(p\d)")
+        parts = []
+        for path in glob(f"{configs.DATA_ROOT}/part_p*"):
+            parts.append(reg.search(path).group(1))
+        for key in upload_dict["annotation_keys"]:
+            upload_dict["parchcore_options"].append(key in set(parts))
+    print(upload_dict)
+    
 update_upload_state()
 
 
@@ -60,15 +77,17 @@ def home(request: Request):
     update_upload_state()
     return return_template(request)
 
-@router.get("/result")
-def result(request: Request):
+@router.post("/show_result")
+def result(
+        request: Request,
+        selected_result_name: str = Form(),
+    ):
     
-    with open("../results/inference_result.pkl", "rb") as f:
+    with open(f"{configs.OUTPUT_PATH}/{selected_result_name}.pkl", "rb") as f:
         inference_result = pickle.load(f)
     outputs = {}
     print(inference_result)
     for ret in inference_result:
-        ret["image_id"]
         preds = []
         labels = []
         for part_name, val in ret["result"].items():
@@ -78,8 +97,6 @@ def result(request: Request):
             "preds":preds,
             "labels":labels
         }
-    
-    
     return templates.TemplateResponse("result.html",
     {
         "request": request,
@@ -95,7 +112,7 @@ async def upload_file(
         files: List[UploadFile]
     ):
     for _file in files:
-        target_path = f"../data/{prefix}/images/{_file.filename}"
+        target_path = f"{configs.DATA_ROOT}/{prefix}/images/{_file.filename}"
         os.makedirs(os.path.dirname(target_path), exist_ok=True)
         with open(target_path, "wb") as f:
             content = _file.file.read()
@@ -104,10 +121,11 @@ async def upload_file(
 
 @router.post("/annotation_upload/{prefix}")
 async def upload_file(
+        prefix: str,
         request: Request,
         file: bytes = File()
     ):
-    target_path = f"../data/{prefix}/annotations.json"
+    target_path = f"{configs.DATA_ROOT}/{prefix}/annotations.json"
     os.makedirs(os.path.dirname(target_path), exist_ok=True)
     with open(target_path, "wb") as f:
         f.write(file)
@@ -142,20 +160,20 @@ def train(
 @router.post("/valid")
 def valid(
         request: Request,
-        model_name: str=Form(),
+        selected_model_name: str=Form(),
     ):
     print(f"start validation debugging..")
     configs = Configs()
     configs.CLASS_NAMES = upload_dict["annotation_keys"]
-    configs.MODEL_PATH = f"../results/models/{model_name}"
+    configs.MODEL_PATH = f"../results/models/{selected_model_name}"
     for index, cls_name in enumerate(configs.CLASS_NAMES):
         configs.PATCHCORE_OPTIONS[cls_name] = upload_dict["parchcore_options"][index]
     target_folder = configs.SEGMENTATION_VALID_IMAGE_PATH
-    
+    print(configs.PATCHCORE_OPTIONS)
     tester = Tester(configs)
     result = tester.run(
         dir_name = target_folder, 
-        file_name = f"{model_name}_valid_result"
+        file_name = f"{selected_model_name}_valid_result"
     )
     debugger = DefaultDebugger(configs)
     outputs = debugger.run()
@@ -168,21 +186,24 @@ def valid(
 @router.post("/test")
 def inference(
         request: Request,
-        model_name: str=Form(),
+        selected_model_name: str=Form(),
         test_name: str=Form(),
     ):
     print(f"start inference..")
+    
     configs = Configs()
+    target_folder = configs.SEGMENTATION_TEST_IMAGE_PATH
+    
     configs.CLASS_NAMES = upload_dict["annotation_keys"]
-    configs.MODEL_PATH = f"../results/models/{model_name}"
+    configs.MODEL_PATH = f"../results/models/{selected_model_name}"
     for index, cls_name in enumerate(configs.CLASS_NAMES):
         configs.PATCHCORE_OPTIONS[cls_name] = upload_dict["parchcore_options"][index]
 
-    target_folder = configs.SEGMENTATION_TEST_IMAGE_PATH
+    
     tester = Tester(configs)
     result = tester.run(
         dir_name = target_folder, 
-        file_name = f"{model_name}_{test_name}"
+        file_name = f"{selected_model_name}_{test_name}"
     )
     
     return return_template(request)
