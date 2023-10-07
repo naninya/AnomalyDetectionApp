@@ -162,8 +162,11 @@ cython_debug/
 
 lightning_logs/
 results/
-models/
+!src/models/
+!src/data/
+
 data/
+src/
 src/detectron2/
 .DS_Store
 *_fortest.ipynb
